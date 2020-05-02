@@ -1,7 +1,7 @@
 <html>
   <head>
 	<title>Recent Plates</title>
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
 
@@ -13,24 +13,12 @@
 </script>  
 <div class="row">
   <div class="col-sm-12">
-    <p><b>Capture On:</b> <%= bCaptureOn %>&nbsp;<b>Stream Mode:</b><%= bStreamMode %>&nbsp;<b>Sensor Mode:</b><%= sStreamSensorMode %> </p>
+    <p><b>Capture On:</b> <%= bCaptureOn %></p>
     <p><a href="/togglecapture">[Toggle Capture Status]</a>&nbsp;
     <a href="/?includenomatch=only">[Only show no match]</a> &nbsp;
     <a href="/?includenomatch=true">[Show No Match + Match]</a>&nbsp; 
-	<a href="/">[Only show match]</a></p>
-	<p>
-	<a href="/togglestreammode">[Toggle Stream Mode]</a>&nbsp;
-	<% if (bStreamMode) { %>
-	<a href="/setsensormode?mode=0">[Auto]</a>&nbsp;
-	<a href="/setsensormode?mode=1">[1920x1080 30 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=2">[2592x1944 15 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=3">[2592x1944 1 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=4">[1296x972 42 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=5">[1296x730 49 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=6">[640x480 60 fps]</a>&nbsp;
-	<a href="/setsensormode?mode=7">[640x480 90 fps]</a>&nbsp;
-	<% } %>
-	</p> 
+	<a href="/">[Only show match]</a>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+	<a href="/poweroff">[Power Off]</a></p>
     <h3>Recent Plates</h3>
 	<table class="table">
 		<tr>
@@ -39,8 +27,7 @@
 			 <th>filename</th>
 			 <th>plate</th>
 			 <th>confidence</th>
-			 <th>streammode</th>
-			 <th>sensormode</th>
+			 <th>processtime</th>
 		</tr>
 		
 		<% if (plates.length>0) {		
@@ -51,8 +38,7 @@
 			 <td><a href="<%= plates[i].filename %>"><%= plates[i].filename %></a></td>
 			 <td><%= plates[i].plate %></td>
 			 <td><%= plates[i].confidence %></td>
-			 <td><%= plates[i].streammode %></td>
-			 <td><%= plates[i].sensormode %></td>
+			 <td><%= plates[i].processtime %></td>
 		   </tr>
 		<% 		}
 		%>
