@@ -68,34 +68,56 @@ const shoot = async () => {
 
 	var filename = './images/img'+timestamp('YYYYMMDDHHmmss')+'.jpg';
 	startTime = new Date();
-		
-	await streamCamera.takeImage().then(image => {
-		stopTime = new Date();
-		console.log(filename);
-		fs.writeFileSync(filename, image);
-		query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','1','6');";
-		console.log(query);
-		db.run(query, function(err) {
-			if (err) {
-				console.log("is error here")
-			  return console.log(err.message);
-			}
-			// get the last insert id
-			console.log(`A row has been inserted with rowid ${this.lastID}`);
-			alpr.send({ id: this.lastID });
-			wsSendAll(this.lastID);
-		//run post process here	
-		//identify(imageid, filename);
-		});
-	//    await streamCamera.stopCapture();
-		
 	
-	});
+	if (bStreamMode) {
+		await streamCamera.takeImage().then(image => {
+			stopTime = new Date();
+			console.log(filename);
+			fs.writeFileSync(filename, image);
+			query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','1','5');";
+			console.log(query);
+			db.run(query, function(err) {
+				if (err) {
+					console.log("is error here")
+				return console.log(err.message);
+				}
+				// get the last insert id
+				console.log(`A row has been inserted with rowid ${this.lastID}`);
+				alpr.send({ id: this.lastID });
+				wsSendAll(this.lastID);
+			//run post process here	
+			//identify(imageid, filename);
+			});
+		});
+	}
+	else {
+		await stillCamera.takeImage().then(image => {
+			stopTime = new Date();
+			console.log(filename);
+			fs.writeFileSync(filename, image);
+			query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','0','0');";
+			console.log(query);
+			db.run(query, function(err) {
+				if (err) {
+					console.log("is error here")
+				return console.log(err.message);
+				}
+				// get the last insert id
+				console.log(`A row has been inserted with rowid ${this.lastID}`);
+				alpr.send({ id: this.lastID });
+				wsSendAll(this.lastID);
+			//run post process here	
+			//identify(imageid, filename);
+			});
+		});
+
+	}
 }
 
 var imageid =0;
 
 var bCaptureOn=false;
+var bStreamMode=true;
 
 var db = new sqlite3.Database('plates.db');
 
@@ -113,11 +135,13 @@ var server = app.listen(3000, function () {
 app.use('/images', express.static(__dirname + '/images'));
 
 app.get('/togglestreammode', function(req, res){
-	if (bStreamMode) {
-		bStreamMode=false;
-	}
-	else {
-		bStreamMode=true;
+	if (!bCaptureOn) {
+		if (bStreamMode) {
+			bStreamMode=false;
+		}
+		else {
+			bStreamMode=true;
+		}
 	}
 	res.redirect('/');
 });
@@ -125,11 +149,15 @@ app.get('/togglestreammode', function(req, res){
 app.get('/togglecapture', function(req, res){
 	if (bCaptureOn) {
 		bCaptureOn=false;
-		streamCamera.stopCapture();
+		if (bStreamMode) {
+			streamCamera.stopCapture();
+		}
 	}
 	else {
 		bCaptureOn=true;
-		streamCamera.startCapture();
+		if (bStreamMode) {
+			streamCamera.startCapture();
+		}
 		setTimeout(shoot, 3000)
 	}
 	res.redirect('/');
@@ -200,6 +228,7 @@ app.get('/', function(req, res){
 
 	db.all(strQuery, function(err,rows) {
 		res.render('plates.ejs', {
+			bStreamMode: bStreamMode,
 			bCaptureOn: bCaptureOn,
 			plates: rows,
 			topid: topid,
