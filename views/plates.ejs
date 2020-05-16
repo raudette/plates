@@ -1,25 +1,53 @@
 <html>
   <head>
-	<title>Recent Plates</title>
+	<title>Recent Plates GPS</title>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+	<script>
+		var socket = new WebSocket("wss://raspberrypi.local/");
 
+		socket.onmessage = function (event) {
+			console.log(event.data);
+			getLocation();  
+		}
+
+		function getLocation() {
+	  		if (navigator.geolocation) {
+			navigator.geolocation.watchPosition(showPosition);
+	  		} 
+		}
+		
+		function showPosition(position) {
+			console.log("Latitude: " + position.coords.latitude + 
+			"<br>Longitude: " + position.coords.longitude + 
+			"<br>accuracy: " + position.coords.accuracy +  	//The accuracy of position (always returned)
+			"<br>altitude: " + position.coords.altitude +  	//The altitude in meters above the mean sea level (returned if available)
+			"<br>altitudeAccuracy: " + position.coords.altitudeAccuracy +  	//The altitude accuracy of position (returned if available)
+			"<br>heading: " + position.coords.heading +  	//The heading as degrees clockwise from North (returned if available)
+			"<br>speed: " + position.coords.speed +  	//The speed in meters per second (returned if available)
+			"<br>timestamp: " + position.timestamp); 	//The date/time of the response (returned if available)
+		}
+
+
+	</script>
   </head>
   <body>
-	
-	<script type="text/javascript">
-		
-</script>  
+
+
+
+
 <div class="row">
   <div class="col-sm-12">
     <p><b>Capture On:</b> <%= bCaptureOn %></p>
-    <p><a href="/togglecapture">[Toggle Capture Status]</a>&nbsp;
-    <a href="/?includenomatch=only">[Only show no match]</a> &nbsp;
-    <a href="/?includenomatch=true">[Show No Match + Match]</a>&nbsp; 
-	<a href="/">[Only show match]</a>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
-	<a href="/poweroff">[Power Off]</a></p>
-    <h3>Recent Plates</h3>
+	<p><a href="/togglecapture">[Toggle Capture Status]</a>&nbsp;
+		<a href="/?includenomatch=only">[Only show no match]</a> &nbsp;
+		<a href="/?includenomatch=true">[Show No Match + Match]</a>&nbsp; 
+		<a href="/platesgps">[Plates GPS]</a>&nbsp; 
+		<a href="/">[Only show match]</a>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+		<a href="/poweroff">[Power Off]</a></p>&nbsp;
+
+<h3>Recent Plates</h3>
 	<table class="table">
 		<tr>
 			 <th>id</th>
