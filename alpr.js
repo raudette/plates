@@ -4,14 +4,12 @@ var sqlite3 = require('sqlite3').verbose()
 var db = new sqlite3.Database('plates.db');
 
 function identify (id, path,timestamp) {
-	console.log (openalpr.IdentifyLicense (path, function (error, output) {
+	openalpr.IdentifyLicense (path, function (error, output) {
 		var results = output.results;
-		console.log (id +" "+ output.processing_time_ms +" "+ ((results.length > 0) ? results[0].plate : "No results"));
-		console.log(results);
 		var currentplate = 0;
 		if (results.length == 0) {
 			query = "update plates set processtime ="+ output.processing_time_ms +",confidence=0 where id = "+id+";";
-			console.log(query);
+			//console.log(query);
 			db.run(query);
 			}
 		while ((results.length > 0) && (currentplate<results.length)) {
@@ -21,16 +19,15 @@ function identify (id, path,timestamp) {
             else {
                 query = "insert into plates ( filename, processtime, plate, confidence,timestamp) values ('"+path+"','"+ output.processing_time_ms+"','"+results[currentplate].plate+"','"+results[currentplate].confidence+"','"+timestamp+"');";
             }
-			console.log(query);
+			//console.log(query);
 			db.run(query);
 			currentplate++;
         }
         process.send({ status: 'done', id: id });
-	}));
+	});
 }
 
 process.on('message', (m) => {
-    console.log('CHILD got message:', m);
     strQuery="select filename,timestamp from plates where id="+m.id;
     db.all(strQuery, function(err, rows) {
         identify(m.id,rows[0].filename,rows[0].timestamp);
@@ -40,9 +37,9 @@ process.on('message', (m) => {
   
 var a;
 a = openalpr.Start ();
-console.log(a);
+console.log("Open ALPR Start:" + a);
 a=openalpr.GetVersion ();
-console.log(a);
+console.log("Open ALPR Version:" + a);
 
 
 
