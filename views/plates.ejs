@@ -34,18 +34,24 @@
   </head>
   <body>
 
-
-
-
 <div class="row">
   <div class="col-sm-12">
     <p><b>Capture On:</b> <%= bCaptureOn %></p>
-    <p><b>Stream Mode:</b> <%= bStreamMode %></p>
+	<p><b>Stream Mode On:</b> <%= bStreamMode %>&nbsp;<b>Stream Sensor Mode:</b><%= iStreamSensorMode %></p>
+	<p><b>GPS On:</b> <%= bGPSOn %></p>
+	<p><% if (bStreamMode) { %>
+		<a href="/setsensormode?mode=0">[0: 1920x1080 30 fps]</a>&nbsp;
+		<a href="/setsensormode?mode=1">[1: 3280x2464 15 fps]</a>&nbsp;
+		<a href="/setsensormode?mode=2">[2: 1640x922 30 fps]</a>&nbsp;
+		<a href="/setsensormode?mode=3">[3: 1640x922 40 fps]</a>&nbsp;
+		<a href="/setsensormode?mode=4">[4: 1280x720 41 fps]</a>&nbsp;
+		<a href="/setsensormode?mode=5">[5: 1280x720 60 fps]</a>&nbsp;
+		<% } %></p>
 	<p><a href="/togglecapture">[Toggle Capture Status]</a>&nbsp;
 		<a href="/togglestreammode">[Toggle Stream Mode]</a>&nbsp;
+		<a href="/togglegps">[Toggle GPS]</a>&nbsp;&nbsp;&nbsp; 
 		<a href="/?includenomatch=only">[Only show no match]</a> &nbsp;
 		<a href="/?includenomatch=true">[Show No Match + Match]</a>&nbsp; 
-		<a href="/platesgps">[Plates GPS]</a>&nbsp; 
 		<a href="/">[Only show match]</a>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
 		<a href="/poweroff">[Power Off]</a></p>&nbsp;
 

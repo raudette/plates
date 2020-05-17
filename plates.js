@@ -58,11 +58,38 @@ const stillCamera = new StillCamera();
 //5	1640x922	16:9	1/10 <= fps <= 40	x	 	Full	2x2
 //6	1280x720	16:9	40 < fps <= 90	x	 	Partial	2x2
 //7	640x480	4:3	40 < fps <= 90	x	 	Partial	2x2
-const streamCamera = new StreamCamera({
+const streamCamera1 = new StreamCamera({
+	codec: Codec.MJPEG,
+	fps: 30,
+	sensorMode: SensorMode.Mode1
+	});
+const streamCamera2 = new StreamCamera({
+	codec: Codec.MJPEG,
+	fps: 15,
+	sensorMode: SensorMode.Mode2
+	});
+const streamCamera530 = new StreamCamera({
 	codec: Codec.MJPEG,
 	fps: 30,
 	sensorMode: SensorMode.Mode5
 	});
+const streamCamera540 = new StreamCamera({
+	codec: Codec.MJPEG,
+	fps: 40,
+	sensorMode: SensorMode.Mode5
+	});
+const streamCamera641 = new StreamCamera({
+	codec: Codec.MJPEG,
+	fps: 41,
+	sensorMode: SensorMode.Mode6
+	});
+const streamCamera660 = new StreamCamera({
+	codec: Codec.MJPEG,
+	fps: 60,
+	sensorMode: SensorMode.Mode6
+	});
+
+var streamCamera = streamCamera530;
 
 const shoot = async () => {
 
@@ -85,8 +112,6 @@ const shoot = async () => {
 				console.log(`A row has been inserted with rowid ${this.lastID}`);
 				alpr.send({ id: this.lastID });
 				wsSendAll(this.lastID);
-			//run post process here	
-			//identify(imageid, filename);
 			});
 		});
 	}
@@ -106,22 +131,18 @@ const shoot = async () => {
 				console.log(`A row has been inserted with rowid ${this.lastID}`);
 				alpr.send({ id: this.lastID });
 				wsSendAll(this.lastID);
-			//run post process here	
-			//identify(imageid, filename);
 			});
 		});
 
 	}
 }
 
-var imageid =0;
-
+//globals
 var bCaptureOn=false;
 var bStreamMode=true;
-
+var bGPSOn=false;
+var iStreamSensorMode = 0;
 var db = new sqlite3.Database('plates.db');
-
-var identifyprocess;
 
 var server = app.listen(3000, function () {
 
@@ -142,6 +163,41 @@ app.get('/togglestreammode', function(req, res){
 		else {
 			bStreamMode=true;
 		}
+	}
+	res.redirect('/');
+});
+
+function setMode() {
+	if (iStreamSensorMode==0) {streamCamera = streamCamera1;}
+	if (iStreamSensorMode==1) {streamCamera = streamCamera2;}
+	if (iStreamSensorMode==2) {streamCamera = streamCamera530;}
+	if (iStreamSensorMode==3) {streamCamera = streamCamera540;}
+	if (iStreamSensorMode==4) {streamCamera = streamCamera641;}
+	if (iStreamSensorMode==5) {streamCamera = streamCamera660;}
+}
+
+app.get('/setsensormode', function(req, res){
+	if (!bCaptureOn) {
+		if (typeof req.query.mode !== 'undefined') {
+			var iMode = parseInt(req.query.mode);
+			if (Number.isInteger(iMode)) {
+				if (iMode>5) {iStreamSensorMode=0;}
+				else if (iMode<0) {iStreamSensorMode=0;}
+				else {iStreamSensorMode=iMode;}
+				setMode(); 
+				}
+		}
+	}
+	res.redirect('/');
+});
+
+app.get('/togglegps', function(req, res){
+
+	if (bGPSOn) {
+		bGPSOn=false;
+	}
+	else {
+		bGPSOn=true;
 	}
 	res.redirect('/');
 });
@@ -230,6 +286,8 @@ app.get('/', function(req, res){
 		res.render('plates.ejs', {
 			bStreamMode: bStreamMode,
 			bCaptureOn: bCaptureOn,
+			bGPSOn: bGPSOn,
+			iStreamSensorMode: iStreamSensorMode,
 			plates: rows,
 			topid: topid,
 			bottomid: bottomid,
