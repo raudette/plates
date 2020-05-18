@@ -3,48 +3,41 @@ var app = express()
 var sqlite3 = require('sqlite3').verbose()
 const timestamp = require('time-stamp');
 var fs = require('fs');
+var formidable = require('formidable');
 
 var exec = require('child_process').exec; //we use this EXEC to shut down
 //we use this child to run our ALPR process
 const cp = require('child_process');
 const alpr = cp.fork('alpr.js');
 
+//Once the child ALPR process is completed, take another picture and restart process
 alpr.on('message', (m) => {
-	console.log('PARENT got message:', m);
+	//console.log('PARENT got message:', m);
 	if (bCaptureOn) {
 		shoot();
 	}
   });
 
-//use websockets to poll GPS, push stuff to client
-var WebSocketServer = require('ws').Server;
-
-wss = new WebSocketServer({port: 8080})
-CLIENTS=[];
-
-wss.on('connection', function(ws) {
-	CLIENTS.push(ws);
-	console.log("connected");
-});
-
-function wsSendAll (message) {
-    for (var i=0; i<CLIENTS.length; i++) {
-        CLIENTS[i].send(message);
-    }
-}
-
+//If the end user turns on GPS, the browser will call this function to associate GPS coordinates with a photo
 app.post('/plates/:id/addgps', function (req, res){
-    var form = new formidable.IncomingForm();
+	var form = new formidable.IncomingForm();
+	//console.log("got gps for "+req.params.id)
     form.parse(req, function (err, fields, files) {
-		author = fields.author;
-		title = fields.title;
-		pool.getConnection(function(err, connection) {
-			strQuery = "INSERT INTO readinglog.readinglog (`userid`, `author`, `title`, `date`) VALUES ("+req.params.id+", '"+author+"', '"+title+"',concat(year(now()),'-',month(now()),'-',day(now()) ) );";
-			console.log(strQuery);
-			connection.query( strQuery, function(err, rows) {
-				connection.release();
-				});
-			});
+		query = "update plates set "+
+		"latitude = "+fields.latitude+ 
+		",longitude="+fields.longitude+ 
+		",accuracy="+fields.accuracy+ 
+		",speed="+fields.speed+ 
+		",heading="+fields.heading+ 
+		",gtimestamp="+fields.gtimestamp+
+		" where id="+req.params.id+";";
+		//console.log(query);
+		db.run(query, function(err) {
+			if (err) {
+				console.log("is error here")
+			return console.log(err.message);
+			}
+		});		
 		res.sendStatus(200);
 	    });
 
@@ -91,6 +84,7 @@ const streamCamera660 = new StreamCamera({
 
 var streamCamera = streamCamera530;
 
+//take a photo, then call the ALPR process to review, and call the browser to get GPS coordinates
 const shoot = async () => {
 
 	var filename = './images/img'+timestamp('YYYYMMDDHHmmss')+'.jpg';
@@ -99,38 +93,34 @@ const shoot = async () => {
 	if (bStreamMode) {
 		await streamCamera.takeImage().then(image => {
 			stopTime = new Date();
-			console.log(filename);
+			//console.log(filename);
 			fs.writeFileSync(filename, image);
-			query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','1','5');";
-			console.log(query);
+			query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','1','"+iStreamSensorMode+"');";
+			//console.log(query);
 			db.run(query, function(err) {
 				if (err) {
 					console.log("is error here")
 				return console.log(err.message);
 				}
-				// get the last insert id
-				console.log(`A row has been inserted with rowid ${this.lastID}`);
 				alpr.send({ id: this.lastID });
-				wsSendAll(this.lastID);
+				if (bGPSOn) {io.emit('getgps', {id: this.lastID});}
 			});
 		});
 	}
 	else {
 		await stillCamera.takeImage().then(image => {
 			stopTime = new Date();
-			console.log(filename);
+			//console.log(filename);
 			fs.writeFileSync(filename, image);
 			query = "insert into plates ( filename,streammode,sensormode) values ('"+filename+"','0','0');";
-			console.log(query);
+			//console.log(query);
 			db.run(query, function(err) {
 				if (err) {
 					console.log("is error here")
 				return console.log(err.message);
 				}
-				// get the last insert id
-				console.log(`A row has been inserted with rowid ${this.lastID}`);
 				alpr.send({ id: this.lastID });
-				wsSendAll(this.lastID);
+				if (bGPSOn) {io.emit('getgps', {id: this.lastID});}
 			});
 		});
 
@@ -144,16 +134,21 @@ var bGPSOn=false;
 var iStreamSensorMode = 0;
 var db = new sqlite3.Database('plates.db');
 
-var server = app.listen(3000, function () {
 
-    var host = server.address().address
-    var port = server.address().port
-  
-    console.log('Plate info http://%s:%s', host, port)
-  
-  })
+var http = require('http').createServer(app);
+var io = require('socket.io')(http);
+
+io.on('connection', (socket) => {
+  //console.log('a user connected');
+});
+
+http.listen(3000, () => {
+  console.log('Bicycle Dashcam - listening on *:3000');
+});
+var http = require('http').createServer(app);
 
 app.use('/images', express.static(__dirname + '/images'));
+app.use('/socket.io/', express.static(__dirname + '/socket.io/'));
 
 app.get('/togglestreammode', function(req, res){
 	if (!bCaptureOn) {
@@ -280,7 +275,7 @@ app.get('/', function(req, res){
 
 	
 	strQuery= "select * from plates " + whereclause + "order by id desc " + limit;
-	console.log(strQuery);
+	//console.log(strQuery);
 
 	db.all(strQuery, function(err,rows) {
 		res.render('plates.ejs', {

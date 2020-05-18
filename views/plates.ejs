@@ -1,35 +1,65 @@
 <html>
   <head>
-	<title>Recent Plates GPS</title>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+	<title>Recent Plates</title>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
 	<script>
-		var socket = new WebSocket("wss://raspberrypi.local/");
+		var socket = io('https://raspberrypi.local/');
+  		socket.on('connect', function(){});
+		socket.on('getgps', function(data) {
+			addgps(data.id);
+		});
+ 		socket.on('disconnect', function(){});
 
-		socket.onmessage = function (event) {
-			console.log(event.data);
-			getLocation();  
-		}
+		var currentPosition = {
+				latitude: 0,
+				longitude: 0,
+				accuracy: 0,
+				heading: 0,
+				speed: 0,
+				gtimestamp: 0
+			}
 
-		function getLocation() {
-	  		if (navigator.geolocation) {
-			navigator.geolocation.watchPosition(showPosition);
-	  		} 
+
+		<% if (bGPSOn) { %>		
+		if (navigator.geolocation) {
+				navigator.geolocation.watchPosition(function(position) {
+					console.log("Position updated")
+					currentPosition.latitude=position.coords.latitude;
+					currentPosition.longitude=position.coords.longitude;
+					currentPosition.accuracy=position.coords.accuracy;
+					currentPosition.heading=position.coords.heading;
+					currentPosition.speed=position.coords.speed;
+					currentPosition.gtimestamp=position.timestamp;
+				});
 		}
+		<% } %>	
 		
-		function showPosition(position) {
-			console.log("Latitude: " + position.coords.latitude + 
-			"<br>Longitude: " + position.coords.longitude + 
-			"<br>accuracy: " + position.coords.accuracy +  	//The accuracy of position (always returned)
-			"<br>altitude: " + position.coords.altitude +  	//The altitude in meters above the mean sea level (returned if available)
-			"<br>altitudeAccuracy: " + position.coords.altitudeAccuracy +  	//The altitude accuracy of position (returned if available)
-			"<br>heading: " + position.coords.heading +  	//The heading as degrees clockwise from North (returned if available)
-			"<br>speed: " + position.coords.speed +  	//The speed in meters per second (returned if available)
-			"<br>timestamp: " + position.timestamp); 	//The date/time of the response (returned if available)
+		function addgps(id) {
+			let positionPackage = {
+				id: id,
+				latitude: currentPosition.latitude,
+				longitude: currentPosition.longitude,
+				accuracy: currentPosition.accuracy,
+				heading: currentPosition.heading,
+				speed: currentPosition.speed,
+				gtimestamp: currentPosition.gtimestamp
+			}
+			
+			$.ajax({
+				url: '/plates/'+id+'/addgps',
+				type: 'POST',
+				dataType: 'json',
+				contentType: 'application/json',
+				data: JSON.stringify(positionPackage),
+				success: function (data) {
+					console.log(data);
+				}
+			});    
 		}
-
-
 	</script>
   </head>
   <body>
@@ -39,6 +69,7 @@
     <p><b>Capture On:</b> <%= bCaptureOn %></p>
 	<p><b>Stream Mode On:</b> <%= bStreamMode %>&nbsp;<b>Stream Sensor Mode:</b><%= iStreamSensorMode %></p>
 	<p><b>GPS On:</b> <%= bGPSOn %></p>
+	<p class="success bg-success"></p>
 	<p><% if (bStreamMode) { %>
 		<a href="/setsensormode?mode=0">[0: 1920x1080 30 fps]</a>&nbsp;
 		<a href="/setsensormode?mode=1">[1: 3280x2464 15 fps]</a>&nbsp;
@@ -62,6 +93,7 @@
 			 <th>timestamp</th>
 			 <th>filename</th>
 			 <th>plate</th>
+			 <th>map link</th>
 			 <th>confidence</th>
 			 <th>processtime</th>
 		</tr>
@@ -73,6 +105,8 @@
 			 <td><%= plates[i].timestamp %></td>
 			 <td><a href="<%= plates[i].filename %>"><%= plates[i].filename %></a></td>
 			 <td><%= plates[i].plate %></td>
+			 <td><a href="https://www.google.com/maps/place/"+<%= plates[i].latitude %>+
+				","+<%= plates[i].longitude %>">map it</a></td>
 			 <td><%= plates[i].confidence %></td>
 			 <td><%= plates[i].processtime %></td>
 		   </tr>
